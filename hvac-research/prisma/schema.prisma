@@ -1,0 +1,430 @@
+// HVAC Business Research System - Database Schema
+// Using PostgreSQL (Supabase) with Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// CORE ENTITIES
+// ============================================================================
+
+model Business {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Basic Information
+  name          String
+  legalName     String?
+  dba           String? // Doing Business As
+
+  // Location
+  address       String?
+  city          String
+  county        String
+  state         String  @default("TX")
+  zipCode       String?
+  latitude      Float?
+  longitude     Float?
+  serviceRadius Int?    // miles
+
+  // Contact
+  phone         String?
+  email         String?
+  website       String?
+
+  // Social Media
+  facebookUrl   String?
+  linkedinUrl   String?
+  instagramUrl  String?
+
+  // Classification
+  specializations String[] // ["residential", "commercial", "industrial"]
+  niches          String[] // ["refrigeration", "clean_rooms", "restaurants"]
+  serviceTypes    String[] // ["installation", "repair", "maintenance"]
+
+  // Ownership Indicators
+  ownershipType     OwnershipType?
+  ownerName         String?
+  ownerAge          Int?
+  foundedYear       Int?
+  generation        Int? // 1st, 2nd, 3rd generation
+  successionStatus  SuccessionStatus?
+
+  // Status Tracking
+  status            BusinessStatus @default(DISCOVERED)
+  qualifiedAt       DateTime?
+  contactedAt       DateTime?
+  disqualifiedAt    DateTime?
+  disqualifyReason  String?
+
+  // Discovery Metadata
+  discoverySource   String? // "deep_research", "tdlr", "permit_records"
+  discoveryJobId    String?
+
+  // Relations
+  licenses          License[]
+  permits           Permit[]
+  reviews           Review[]
+  employees         EmployeeEstimate[]
+  fleet             FleetEstimate[]
+  certifications    Certification[]
+  associations      AssociationMembership[]
+  scores            Score[]
+  researchJobs      ResearchJobBusiness[]
+  notes             Note[]
+
+  @@index([county])
+  @@index([status])
+  @@index([city])
+}
+
+model License {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // License Details
+  licenseNumber String
+  licenseType   String  // ACR, ACB, etc.
+  status        LicenseStatus
+  issueDate     DateTime?
+  expirationDate DateTime?
+
+  // TDLR Specific
+  tdlrRecordId  String?
+
+  @@unique([businessId, licenseNumber])
+  @@index([licenseNumber])
+}
+
+model Permit {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // Permit Details
+  permitNumber  String
+  permitType    String  // residential, commercial, new_construction, replacement
+  description   String?
+  status        String?
+  issueDate     DateTime?
+  completedDate DateTime?
+
+  // Project Details
+  projectAddress String?
+  projectCity    String?
+  projectValue   Float?
+
+  // Source
+  county        String
+  sourceUrl     String?
+
+  @@index([businessId])
+  @@index([county])
+  @@index([issueDate])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // Review Details
+  source        ReviewSource
+  rating        Float
+  reviewCount   Int
+  averageRating Float?
+
+  // Sentiment Analysis
+  sentimentScore Float?  // -1 to 1
+  commonThemes   String[]
+
+  // Snapshot Date
+  snapshotDate  DateTime @default(now())
+
+  // Source URL
+  profileUrl    String?
+
+  @@index([businessId])
+  @@index([source])
+}
+
+model EmployeeEstimate {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // Estimate
+  estimatedCount  Int
+  minCount        Int?
+  maxCount        Int?
+  confidence      Float? // 0-1
+
+  // Source Details
+  source          String // linkedin, job_postings, ai_estimate
+  sourceDetails   Json?
+
+  snapshotDate    DateTime @default(now())
+
+  @@index([businessId])
+}
+
+model FleetEstimate {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // Estimate
+  vehicleCount    Int
+  minCount        Int?
+  maxCount        Int?
+  confidence      Float? // 0-1
+
+  // Source
+  source          String // registration, google_maps, ai_estimate
+  sourceDetails   Json?
+
+  snapshotDate    DateTime @default(now())
+
+  @@index([businessId])
+}
+
+model Certification {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // Certification Details
+  type          String  // EPA_608, NATE, manufacturer
+  name          String
+  issuer        String?
+  certNumber    String?
+  issueDate     DateTime?
+  expirationDate DateTime?
+
+  @@index([businessId])
+}
+
+model AssociationMembership {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // Membership Details
+  organization  String  // ACCA, PHCC, Chamber
+  membershipLevel String?
+  memberSince   DateTime?
+  verified      Boolean @default(false)
+
+  @@index([businessId])
+}
+
+// ============================================================================
+// SCORING
+// ============================================================================
+
+model Score {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // Component Scores (0-100)
+  revenueProxyScore     Float
+  onlineWeaknessScore   Float
+  acquisitionFitScore   Float
+  growthSignalsScore    Float
+
+  // Overall Score
+  overallScore          Float
+
+  // Recommendation
+  recommendation        Recommendation
+
+  // Detailed Breakdown
+  breakdown             Json
+
+  // Scoring Config Version
+  configVersion         String @default("1.0")
+
+  @@index([businessId])
+  @@index([overallScore])
+  @@index([recommendation])
+}
+
+// ============================================================================
+// RESEARCH JOBS
+// ============================================================================
+
+model ResearchJob {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Job Configuration
+  name          String
+  type          ResearchJobType
+  status        ResearchJobStatus @default(PENDING)
+
+  // Parameters
+  parameters    Json  // region, filters, etc.
+
+  // OpenAI Deep Research
+  openaiResponseId String?
+
+  // Progress
+  startedAt     DateTime?
+  completedAt   DateTime?
+  progress      Int       @default(0) // 0-100
+
+  // Results
+  businessesFound     Int @default(0)
+  businessesQualified Int @default(0)
+
+  // Errors
+  error         String?
+
+  // Relations
+  businesses    ResearchJobBusiness[]
+
+  @@index([status])
+  @@index([type])
+}
+
+model ResearchJobBusiness {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  researchJobId String
+  researchJob   ResearchJob @relation(fields: [researchJobId], references: [id], onDelete: Cascade)
+
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([researchJobId, businessId])
+}
+
+// ============================================================================
+// NOTES & ACTIVITY
+// ============================================================================
+
+model Note {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  content       String
+  type          NoteType @default(GENERAL)
+
+  @@index([businessId])
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum OwnershipType {
+  FAMILY_OWNED
+  FRANCHISE
+  PRIVATE_EQUITY
+  CORPORATE
+  UNKNOWN
+}
+
+enum SuccessionStatus {
+  OWNER_RETIRING
+  SUCCESSION_PLANNED
+  NO_SUCCESSOR
+  RECENTLY_TRANSITIONED
+  UNKNOWN
+}
+
+enum BusinessStatus {
+  DISCOVERED
+  RESEARCHING
+  QUALIFIED
+  DISQUALIFIED
+  CONTACTED
+  IN_CONVERSATION
+  CLOSED
+}
+
+enum LicenseStatus {
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+  REVOKED
+  PENDING
+}
+
+enum ReviewSource {
+  GOOGLE
+  YELP
+  BBB
+  FACEBOOK
+  ANGI
+  OTHER
+}
+
+enum Recommendation {
+  HIGH_PRIORITY
+  MEDIUM_PRIORITY
+  LOW_PRIORITY
+  NOT_RECOMMENDED
+}
+
+enum ResearchJobType {
+  REGION_DISCOVERY   // Discover businesses in a region
+  BUSINESS_ENRICHMENT // Enrich existing business data
+  PERMIT_SCAN        // Scan permit records
+  REVIEW_UPDATE      // Update review data
+}
+
+enum ResearchJobStatus {
+  PENDING
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum NoteType {
+  GENERAL
+  CONTACT_ATTEMPT
+  RESEARCH_FINDING
+  DISQUALIFICATION
+}

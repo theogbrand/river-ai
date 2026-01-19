@@ -1,0 +1,52 @@
+{
+  "version": "1.0",
+  "weights": {
+    "revenueProxy": 0.30,
+    "onlineWeakness": 0.25,
+    "acquisitionFit": 0.25,
+    "growthSignals": 0.20
+  },
+  "thresholds": {
+    "highPriority": 75,
+    "mediumPriority": 50,
+    "lowPriority": 25
+  },
+  "revenueTargets": {
+    "minRevenue": 1000000,
+    "maxRevenue": 10000000,
+    "idealRevenue": 5000000
+  },
+  "indicators": {
+    "employee": {
+      "ideal": { "min": 5, "max": 50, "peak": 25 },
+      "acceptable": { "min": 3, "max": 100 }
+    },
+    "fleet": {
+      "ideal": { "min": 3, "max": 20, "peak": 10 },
+      "acceptable": { "min": 1, "max": 40 }
+    },
+    "permits": {
+      "ideal": { "min": 50, "max": 400 },
+      "acceptable": { "min": 10, "max": 600 }
+    },
+    "businessAge": {
+      "ideal": { "min": 10, "max": 30 },
+      "acceptable": { "min": 5, "max": 50 }
+    }
+  },
+  "priorityCounties": [
+    "Harris",
+    "Dallas",
+    "Tarrant",
+    "Bexar",
+    "Travis"
+  ],
+  "premiumNiches": [
+    "refrigeration",
+    "clean_rooms",
+    "industrial",
+    "restaurants",
+    "data_centers",
+    "healthcare"
+  ]
+}
